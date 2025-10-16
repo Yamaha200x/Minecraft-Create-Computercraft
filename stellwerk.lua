@@ -75,13 +75,22 @@ end
 -- Hauptprogrammlogik
 drawGUI() -- GUI initial zeichnen
 
+-- Hauptprogrammlogik
+drawGUI() -- GUI initial zeichnen
+
 while true do
-    local event, p1, p2 = os.pullEvent()
+    -- KORREKTUR: Das monitor_touch-Event gibt VIER Werte zurück: event, side, x, y
+    local event, p1, p2, p3 = os.pullEvent() 
 
     if event == "monitor_touch" then
-        -- p1 und p2 sind die x/y Koordinaten des Klicks auf dem Monitor
-        local click_x = p1
-        local click_y = p2
+        
+        local click_side = p1  -- Die Seite, auf der der Monitor ist (hier nicht genutzt)
+        local click_x = p2     -- Die x-Koordinate ist das ZWEITE Argument
+        local click_y = p3     -- Die y-Koordinate ist das DRITTE Argument
+        
+        -- Da die Variable MONITOR_SIDE bereits definiert ist, können Sie auch prüfen, ob der Klick 
+        -- auf dem richtigen Monitor erfolgte, falls Sie mehrere Monitore haben:
+        -- if click_side ~= MONITOR_SIDE then goto continue_loop end 
         
         -- Prüfen, ob der Klick innerhalb der Button-Koordinaten liegt
         local btn_x = 2
@@ -89,7 +98,8 @@ while true do
         local btn_w = 10
         local btn_h = 2
         
-        if click_x >= btn_x and click_x < btn_x + btn_w and
+        -- Zeile 92 (jetzt korrigiert, da click_x und click_y nun Zahlen sind)
+        if click_x >= btn_x and click_x < btn_x + btn_w and 
            click_y >= btn_y and click_y < btn_y + btn_h then
             
             toggleWeiche()
