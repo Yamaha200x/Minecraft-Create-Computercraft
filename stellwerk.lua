@@ -4,7 +4,7 @@
 local MONITOR_SIDE = "right" -- Seite, an der der Monitor angeschlossen ist
 local WEICHE_SIDE = "left"   -- Seite, an der die Weiche (Redstone) angeschlossen ist
 
--- Initialer Zustand der Weiche (true=EIN/gestellt, false=AUS/Grundstellung)
+-- Initialer Zustand der Weiche
 local weiche_status = false
 
 -- Monitor-API initialisieren
@@ -13,9 +13,7 @@ if not monitor then
     error("Fehler: Monitor an Seite '" .. MONITOR_SIDE .. "' nicht gefunden!")
 end
 
--- Monitor-Größe und Farben einstellen
-local w, h = monitor.getSize()
-monitor.setTextScale(1)
+-- Farben einstellen
 local COLOR_BG = colors.black
 local COLOR_FG = colors.white
 local COLOR_WEICHE_EIN = colors.green
@@ -25,44 +23,53 @@ local COLOR_WEICHE_AUS = colors.red
 local function drawGUI()
     monitor.setBackgroundColor(COLOR_BG)
     monitor.clear()
-    monitor.setTextColor(COLOR_FG)
     
-    -- Titel
-    monitor.setCursorPos(2, 1)
-    monitor.write("ComputerCraft Stellwerk")
-
-    -- Weichen-Status Text
-    monitor.setCursorPos(2, 3)
-    monitor.write("Weiche 1 Status:")
+    -- 1. TEXTSKALIERUNG ANPASSEN (WICHTIG!)
+    -- Skalierung 0.5 zeigt viermal mehr Text (2x in Breite, 2x in Höhe)
+    monitor.setTextScale(0.5) 
+    
+    local w, h = monitor.getSize()
+    -- Bei Skala 0.5 ist w ca. 100, h ca. 6.
+    
+    -- Status Text (Position links oben)
+    monitor.setTextColor(COLOR_FG)
+    monitor.setCursorPos(2, 2) -- x=2, y=2 (im oberen Block)
+    monitor.write("Weiche 1:")
     
     -- Statusanzeige (Text)
-    monitor.setCursorPos(2, 4)
-    local status_text = weiche_status and "GESTELLT (Grün)" or "GRUNDSTELLUNG (Rot)"
+    monitor.setCursorPos(2, 3) 
+    local status_text = weiche_status and "GESTELLT (EIN)" or "GRUNDST (AUS)"
     monitor.write(status_text)
     
-    -- Interaktiver Button
-    monitor.setCursorPos(2, 6)
-    monitor.write("KLICKEN zum Umschalten:")
+    -- Statusfarbe (als kleine Leuchte)
+    local status_color = weiche_status and COLOR_WEICHE_EIN or COLOR_WEICHE_AUS
+    monitor.setBackgroundColor(status_color)
+    monitor.setCursorPos(15, 2) 
+    monitor.write("  ") -- Zwei Leerzeichen als visuelle Leuchte
+    monitor.setBackgroundColor(COLOR_BG) 
     
-    -- Button-Feld (Größe: 10x2)
-    local btn_x = 2
-    local btn_y = 8
-    local btn_w = 10
-    local btn_h = 2
+    -- Interaktiver Button (Position rechts unten)
+    local btn_w = 12  -- Breite
+    local btn_h = 2   -- Höhe
+    local btn_x = w - btn_w - 1 -- Rechtsbündig
+    local btn_y = h - btn_h - 1 -- Unten ausgerichtet (ca. Y=3)
     
     local btn_color = weiche_status and COLOR_WEICHE_EIN or COLOR_WEICHE_AUS
     monitor.setBackgroundColor(btn_color)
+    
+    -- Button-Feld füllen
     for y = 0, btn_h - 1 do
         monitor.setCursorPos(btn_x, btn_y + y)
-        monitor.write(string.rep(" ", btn_w)) -- Leerräume füllen das Feld
+        monitor.write(string.rep(" ", btn_w)) 
     end
     
     -- Button-Text
-    monitor.setTextColor(colors.white) -- Sicherstellen, dass Text sichtbar ist
-    monitor.setCursorPos(btn_x + 1, btn_y + 1)
+    monitor.setTextColor(colors.white) 
+    monitor.setCursorPos(btn_x + 3, btn_y + 1)
     monitor.write("SCHALTEN")
     
-    monitor.setBackgroundColor(COLOR_BG) -- Hintergrundfarbe zurücksetzen
+    -- Skalierung und Farben zurücksetzen (für weitere Ausgaben)
+    monitor.setBackgroundColor(COLOR_BG) 
     monitor.setTextColor(COLOR_FG)
 end
 
@@ -75,30 +82,23 @@ end
 -- Hauptprogrammlogik
 drawGUI() -- GUI initial zeichnen
 
--- Hauptprogrammlogik
-drawGUI() -- GUI initial zeichnen
-
 while true do
-    -- KORREKTUR: Das monitor_touch-Event gibt VIER Werte zurück: event, side, x, y
+    -- Das monitor_touch-Event gibt event, side, x, y zurück
     local event, p1, p2, p3 = os.pullEvent() 
 
     if event == "monitor_touch" then
         
-        local click_side = p1  -- Die Seite, auf der der Monitor ist (hier nicht genutzt)
-        local click_x = p2     -- Die x-Koordinate ist das ZWEITE Argument
-        local click_y = p3     -- Die y-Koordinate ist das DRITTE Argument
+        -- p2 und p3 sind die X/Y Koordinaten, wenn TextScale = 0.5 aktiv ist!
+        local click_x = p2     
+        local click_y = p3     
         
-        -- Da die Variable MONITOR_SIDE bereits definiert ist, können Sie auch prüfen, ob der Klick 
-        -- auf dem richtigen Monitor erfolgte, falls Sie mehrere Monitore haben:
-        -- if click_side ~= MONITOR_SIDE then goto continue_loop end 
+        -- Button-Koordinaten neu berechnen (muss exakt zur drawGUI passen!)
+        local w, h = monitor.getSize()
+        local btn_w = 12  
+        local btn_h = 2   
+        local btn_x = w - btn_w - 1 
+        local btn_y = h - btn_h - 1 
         
-        -- Prüfen, ob der Klick innerhalb der Button-Koordinaten liegt
-        local btn_x = 2
-        local btn_y = 8
-        local btn_w = 10
-        local btn_h = 2
-        
-        -- Zeile 92 (jetzt korrigiert, da click_x und click_y nun Zahlen sind)
         if click_x >= btn_x and click_x < btn_x + btn_w and 
            click_y >= btn_y and click_y < btn_y + btn_h then
             
