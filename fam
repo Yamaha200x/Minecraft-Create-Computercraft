@@ -1,0 +1,83 @@
+-- Konfiguration
+local SEED_SLOT = 1          -- Inventar-Slot der Samen
+local HOE_SLOT = 16          -- Inventar-Slot der Hacke (MUSS sich HIER befinden)
+local REFILL_THRESHOLD = 5
+local LENGTH = 50
+local WIDTH = 50
+
+-- =================================================================
+-- FUNKTION: SEEDS NACHFÜLLEN (unverändert)
+-- =================================================================
+function refill_seeds()
+    print("Samenstand niedrig. Starte Refill-Routine...")
+    local original_slot = turtle.getSelectedSlot()
+    turtle.turnLeft()
+    turtle.turnLeft()
+    turtle.select(SEED_SLOT)
+    local sucked = turtle.suck(64) 
+    print("Refill abgeschlossen. " .. sucked .. " Samen eingesaugt.")
+    turtle.turnLeft()
+    turtle.turnLeft()
+    turtle.select(original_slot)
+end
+
+-- =================================================================
+-- HAUPTPROGRAMM: FARMING-SCHLEIFE
+-- =================================================================
+
+for row = 1, WIDTH do
+    print("Bearbeite Reihe " .. row .. " von " .. WIDTH)
+    
+    for col = 1, LENGTH do
+        
+        -- A) INVENTORY CHECK: Nachfüllen, falls nötig
+        if turtle.getItemCount(SEED_SLOT) < REFILL_THRESHOLD then
+            refill_seeds()
+            if turtle.getItemCount(SEED_SLOT) == 0 then
+                print("FEHLER: Keine Samen mehr in der Kiste. Stoppe Programm.")
+                return 
+            end
+        end
+
+        -- B) SCHRITT 1: UMGRABEN (TILLING)
+        -- Wähle die Hacke (Hoe) aus (Slot 16)
+        turtle.select(HOE_SLOT) 
+        local tilled, reason_till = turtle.place() -- <--- place() führt die Hacken-Aktion aus
+        
+        if not tilled then
+            print("Umgraben fehlgeschlagen an Col " .. col .. ": " .. (reason_till or "Block ist kein Dirt/Gras"))
+            -- Hier könnten wir abbrechen, aber wir versuchen trotzdem zu pflanzen, falls schon Ackerland
+        end
+
+        -- C) SCHRITT 2: PFLANZEN (PLACING SEEDS)
+        -- Wähle die Samen aus (Slot 1)
+        turtle.select(SEED_SLOT)
+        local planted, reason_plant = turtle.place() 
+        
+        if not planted then
+            print("Pflanzen fehlgeschlagen an Col " .. col .. ": " .. (reason_plant or "Kein Ackerland"))
+        end
+        
+        -- D) BEWEGUNG: Einen Schritt vorwärts
+        if col < LENGTH then
+            local moved, move_reason = turtle.forward()
+            if not moved then
+                print("FEHLER: Bewegung fehlgeschlagen an Col " .. col .. ". Prüfe Brennstoff/Hindernis!")
+                return
+            end
+        end
+    end
+    
+    -- E) REIHENWECHSEL
+    if row < WIDTH then
+        turtle.turnLeft() 
+        local moved, move_reason = turtle.forward()
+        if not moved then
+            print("FEHLER: Reihenwechsel fehlgeschlagen. Ende.")
+            return
+        end
+        turtle.turnLeft()
+    end
+end
+
+print("50x50 Fläche fertig bepflanzt! Programm beendet.")
