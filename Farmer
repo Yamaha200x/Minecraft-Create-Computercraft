@@ -1,0 +1,99 @@
+-- Konfiguration
+local SEED_SLOT = 1          -- Inventar-Slot der Samen
+local REFILL_THRESHOLD = 5   -- Nachfüllen, wenn weniger als 5 Samen vorhanden sind
+local LENGTH = 50            -- Länge der Reihe (50 Blöcke)
+local WIDTH = 50             -- Anzahl der Reihen (50 Reihen)
+local HOE_SIDE = "left"      -- Die Hacke muss als Upgrade links ausgerüstet sein
+
+-- =================================================================
+-- FUNKTION: SEEDS NACHFÜLLEN
+-- Holt Seeds aus der Kiste HINTER der Turtle (muss vorher umdrehen)
+-- =================================================================
+function refill_seeds()
+    print("Samenstand niedrig. Starte Refill-Routine...")
+    
+    local original_slot = turtle.getSelectedSlot()
+    
+    -- 180 Grad drehen, um zur Kiste zu blicken
+    turtle.turnLeft()
+    turtle.turnLeft()
+    
+    -- Samen-Slot auswählen und saugen (holt von der Kiste hinter der Turtle)
+    turtle.select(SEED_SLOT)
+    local sucked = turtle.suck(64) 
+    
+    print("Refill abgeschlossen. " .. sucked .. " Samen eingesaugt.")
+    
+    -- 180 Grad zurückdrehen, um zum Feld zu blicken
+    turtle.turnLeft()
+    turtle.turnLeft()
+    
+    -- Den Seed-Slot wieder auswählen
+    turtle.select(original_slot)
+end
+
+-- =================================================================
+-- HAUPTPROGRAMM: FARMING-SCHLEIFE
+-- =================================================================
+
+-- Wir starten, indem wir den Slot mit den Seeds auswählen
+turtle.select(SEED_SLOT)
+
+for row = 1, WIDTH do
+    print("Bearbeite Reihe " .. row .. " von " .. WIDTH)
+    
+    for col = 1, LENGTH do
+        
+        -- A) INVENTORY CHECK: Nachfüllen, falls nötig
+        if turtle.getItemCount(SEED_SLOT) < REFILL_THRESHOLD then
+            refill_seeds()
+            if turtle.getItemCount(SEED_SLOT) == 0 then
+                print("FEHLER: Keine Samen mehr in der Kiste. Stoppe Programm.")
+                return 
+            end
+            turtle.select(SEED_SLOT) -- Stelle sicher, dass der Seed-Slot ausgewählt ist
+        end
+
+        -- B) SCHRITT 1: UMGRABEN (TILLING)
+        -- Nutzt die Hoe-Upgrade-Funktion, die in manchen CC-Versionen durch dig ausgelöst wird.
+        -- Wenn erfolgreich, wurde der Dirt-Block zu Farmland.
+        local tilled, reason_till = turtle.dig(HOE_SIDE) 
+        
+        if not tilled then
+            -- Wenn das Umgraben fehlschlägt, ist der Block wahrscheinlich schon Ackerland.
+            -- Wir ignorieren den Fehler und gehen direkt zum Pflanzen über.
+        end
+
+        -- C) SCHRITT 2: PFLANZEN (PLACING SEEDS)
+        -- Da der Seed-Slot ausgewählt ist, wird nun auf das Ackerland gepflanzt.
+        local planted, reason_plant = turtle.place() 
+        
+        if not planted then
+            print("Pflanzen fehlgeschlagen an Col " .. col .. ": " .. (reason_plant or "Kein Ackerland oder Samen"))
+        end
+        
+        -- D) BEWEGUNG: Einen Schritt vorwärts
+        if col < LENGTH then
+            local moved, move_reason = turtle.forward()
+            if not moved then
+                print("FEHLER: Bewegung fehlgeschlagen an Col " .. col .. ". Prüfe Brennstoff/Hindernis!")
+                return -- Stoppt, um endlose Fehler zu vermeiden
+            end
+        end
+    end
+    
+    -- E) REIHENWECHSEL: Am Ende der Reihe
+    if row < WIDTH then
+        turtle.turnLeft() -- Dreht 90 Grad
+        
+        local moved, move_reason = turtle.forward() -- Geht zur nächsten Reihe
+        if not moved then
+            print("FEHLER: Reihenwechsel fehlgeschlagen. Ende.")
+            return
+        end
+        
+        turtle.turnLeft() -- Dreht weitere 90 Grad, um in die entgegengesetzte Richtung zu blicken
+    end
+end
+
+print("50x50 Fläche fertig bepflanzt! Programm beendet.")
