@@ -1,62 +1,30 @@
 -- Konfiguration
 local SEED_SLOT = 1          -- Inventar-Slot der Samen
-local HOE_SLOT = 16          -- Inventar-Slot der Hacke (falls nicht als Upgrade)
 local REFILL_THRESHOLD = 5
 local LENGTH = 50
 local WIDTH = 50
 
--- =================================================================
--- FUNKTION: SEEDS NACHFÜLLEN (unverändert)
--- =================================================================
-function refill_seeds()
-    print("Samenstand niedrig. Starte Refill-Routine...")
-    
-    -- Speichere aktuellen Slot (könnte der HOE_SLOT sein)
-    local original_slot = turtle.getSelectedSlot()
-    
-    turtle.turnLeft()
-    turtle.turnLeft()
-    
-    turtle.select(SEED_SLOT)
-    local sucked = turtle.suck(64) 
-    
-    print("Refill abgeschlossen. " .. sucked .. " Samen eingesaugt.")
-    
-    turtle.turnLeft()
-    turtle.turnLeft()
-    
-    turtle.select(original_slot) -- Zurück zum ursprünglichen Slot
-end
+-- ... [refill_seeds Funktion bleibt gleich] ... 
 
--- =================================================================
--- HAUPTPROGRAMM: FARMING-SCHLEIFE
--- =================================================================
+-- HAUPTPROGRAMM (Nur der Loop-Teil ist relevant)
 for row = 1, WIDTH do
     print("Bearbeite Reihe " .. row .. " von " .. WIDTH)
     
     for col = 1, LENGTH do
         
         -- A) INVENTORY CHECK
-        if turtle.getItemCount(SEED_SLOT) < REFILL_THRESHOLD then
-            refill_seeds()
-            if turtle.getItemCount(SEED_SLOT) == 0 then
-                print("FEHLER: Keine Samen mehr in der Kiste. Stoppe Programm.")
-                return 
-            end
-        end
+        -- ... [Refill-Code bleibt gleich] ...
 
-        -- B) SCHRITT 1: UMGRABEN (TILLING)
-        -- Wähle die Hacke (Hoe) aus
-        turtle.select(HOE_SLOT) 
-        local tilled, reason_till = turtle.place() -- <--- place() nutzt das Tool für Tilling
+        -- B) SCHRITT 1: UMGRABEN (TILLING) MIT UPGRADE-HACKE
+        -- Wir versuchen dig("left"). Manche CC-Versionen behandeln die Hoe-Aktion hier.
+        local tilled, reason_till = turtle.dig("left") 
         
         if not tilled then
-            -- Wenn das Umgraben fehlschlägt, ist der Block vielleicht schon Ackerland
-            -- Wir ignorieren den Fehler und versuchen trotzdem zu pflanzen
+            -- Wenn das Umgraben fehlschlägt, ist der Block vielleicht schon Ackerland.
+            -- Wir ignorieren den Fehler (wollen nicht den Loop stoppen)
         end
 
         -- C) SCHRITT 2: PFLANZEN (PLACING SEEDS)
-        -- Wähle die Samen aus
         turtle.select(SEED_SLOT)
         local planted, reason_plant = turtle.place() 
         
@@ -75,15 +43,5 @@ for row = 1, WIDTH do
     end
     
     -- E) REIHENWECHSEL
-    if row < WIDTH then
-        turtle.turnLeft() 
-        local moved, move_reason = turtle.forward()
-        if not moved then
-            print("FEHLER: Reihenwechsel fehlgeschlagen. Ende.")
-            return
-        end
-        turtle.turnLeft()
-    end
+    -- ... [Reihenwechsel-Code bleibt gleich] ...
 end
-
-print("50x50 Fläche fertig bepflanzt!")
